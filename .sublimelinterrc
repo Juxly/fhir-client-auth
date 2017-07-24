@@ -1,0 +1,15 @@
+{
+  "linters": {
+    "jshint": {
+        "@disable": true
+      },
+    "eslint": {
+      "@disable": false,
+      "excludes": [
+          "**/node_modules/**",
+          "**/bower_components/**",
+          "**/dist/**",
+          "**/tests/**"
+      ]
+    }
+}
