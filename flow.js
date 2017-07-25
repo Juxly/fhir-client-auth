@@ -54,11 +54,11 @@ class Flow {
     }
 
     return new Promise(function (resolve, reject) {
-      var xhr = new XMLHttpRequest()
+      let xhr = new XMLHttpRequest()
       xhr.open('POST', state.provider.oauth2.token_uri)
       if (state.client.secret) xhr.setRequestHeader('Authorization', 'Basic ' + btoa(state.client.client_id + ':' + state.client.secret))
       else data['client_id'] = state.client.client_id
-      xhr.setRequestHeader('Content-Type', 'application/json')
+      xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded')
       xhr.onload = function () {
         if (this.status >= 200 && this.status < 300) resolve(Util.extend(JSON.parse(xhr.response), params))
         else {
@@ -74,7 +74,7 @@ class Flow {
           statusText: xhr.statusText
         }))
       }
-      xhr.send(JSON.stringify(data))
+      xhr.send(Util.toURLEncoded(data))
     })
   }
 }

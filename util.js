@@ -18,6 +18,18 @@ class Util {
     for (var key in b) if (b.hasOwnProperty(key)) a[key] = b[key]
     return a
   }
+
+  toURLEncoded (element, key, list) {
+    list = list || []
+    if (typeof (element) === 'object') {
+      for (var idx in element) {
+        this.toURLEncoded(element[idx], key ? key + '[ ' + idx + ']' : idx, list)
+      }
+    } else {
+      list.push(key + '=' + encodeURIComponent(element))
+    }
+    return list.join('&')
+  }
 }
 
 export default new Util()
