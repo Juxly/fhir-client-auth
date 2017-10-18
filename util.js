@@ -30,6 +30,14 @@ class Util {
     }
     return list.join('&')
   }
+
+  toXHRError (xhr) {
+    var er = new Error({
+      status: xhr.status,
+      statusText: xhr.statusText
+    })
+    return er
+  }
 }
 
 export default new Util()

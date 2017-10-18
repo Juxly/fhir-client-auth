@@ -3,6 +3,7 @@ import Flow from './flow'
 import Smart from './smart'
 import JWT from './jwt'
 import Util from './util'
+import Token from './token'
 
 module.exports = {
   ready: ready
@@ -14,15 +15,33 @@ if (!window.Promise) {
 
 function getPreviousToken () {
   var state = Util.getParam('state')
+  if (!sessionStorage[state]) return
   return JSON.parse(sessionStorage[state]).tokenResponse
 }
 
 function completePageReload () {
   return new Promise(function (resolve, reject) {
     process.nextTick(function () {
-      resolve(getPreviousToken())
+      var token = getPreviousToken()
+      if (!isTokenExpired(token)) resolve(token)
+      else {
+        return refreshToken().then((result) => {
+          resolve(result)
+        }).catch(function (err) {
+          reject(err)
+        })
+      }
     })
   })
+}
+
+function isTokenExpired (tr) {
+  return !tr.expiratonDateTime || new Date(tr.expiratonDateTime) < new Date()
+}
+
+function refreshToken () {
+  var state = Util.getParam('state')
+  return Token.refresh(JSON.parse(sessionStorage[state]))
 }
 
 function readyArgs () {
@@ -68,10 +87,10 @@ function readyArgs () {
 function validTokenResponse () {
   var args = arguments
   var state = Util.getParam('state') || (args.input && args.input.state)
-  return (state && sessionStorage[state] && JSON.parse(sessionStorage[state]).tokenResponse)
+  return state && sessionStorage[state] && JSON.parse(sessionStorage[state]).tokenResponse !== undefined
 }
 
-function ready (input, callback, errback) {
+function ready () {
   var args = readyArgs.apply(this, arguments)
 
   // decide between token flow (implicit grant) and code flow (authorization code grant)
@@ -79,19 +98,23 @@ function ready (input, callback, errback) {
 
   var accessTokenResolver = null
 
-  if (validTokenResponse()) { // we're reloading after successful completion
+  var validToken = validTokenResponse()
+
+  if (validToken) { // we're reloading after successful completion
     accessTokenResolver = completePageReload()
   } else if (isCode) { // code flow
     accessTokenResolver = Flow.code(args.input)
   } else { // token flow
     accessTokenResolver = Flow.token(args.input)
   }
-  accessTokenResolver.then(function (tokenResponse) {
-    if (!tokenResponse || !tokenResponse.state) {
-      return args.errback('No state parameter found in authorization response.')
-    }
+  accessTokenResolver.then((tokenResponse) => {
+    if (!tokenResponse || !tokenResponse.state) return args.errback('No state parameter found in authorization response.')
 
     // Save the tokenResponse object and the state into sessionStorage keyed by state
+    if (!tokenResponse.expiratonDateTime) {
+      var t = new Date()
+      tokenResponse.expiratonDateTime = t.setSeconds(t.getSeconds() + Number(tokenResponse.expires_in))
+    }
     sessionStorage[tokenResponse.state] = JSON.stringify(Util.extend(JSON.parse(sessionStorage[tokenResponse.state]), { tokenResponse: tokenResponse }))
 
     var state = JSON.parse(sessionStorage[tokenResponse.state])
@@ -123,7 +146,7 @@ function ready (input, callback, errback) {
     smart.state = JSON.parse(JSON.stringify(state))
     smart.tokenResponse = JSON.parse(JSON.stringify(tokenResponse))
     args.callback(smart)
-  }, function () {
-    args.errback('Failed to obtain access token.')
+  }).catch(function (err) {
+    args.errback(err)
   })
 }

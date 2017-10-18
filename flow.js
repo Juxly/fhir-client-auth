@@ -62,17 +62,11 @@ class Flow {
       xhr.onload = function () {
         if (this.status >= 200 && this.status < 300) resolve(Util.extend(JSON.parse(xhr.response), params))
         else {
-          reject(new Error({
-            status: this.status,
-            statusText: xhr.statusText
-          }))
+          reject(Util.toXHRError(xhr))
         }
       }
       xhr.onerror = function () {
-        reject(new Error({
-          status: this.status,
-          statusText: xhr.statusText
-        }))
+        reject(Util.toXHRError(xhr))
       }
       xhr.send(Util.toURLEncoded(data))
     })
