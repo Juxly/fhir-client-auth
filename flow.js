@@ -55,7 +55,12 @@ class Flow {
 
     return new Promise(function (resolve, reject) {
       let xhr = new XMLHttpRequest()
-      xhr.open('POST', state.provider.oauth2.token_uri)
+      if (state.client.tokenOverride) {
+        xhr.open('POST', window.location.protocol + '//' + window.location.host + '/token')
+        data.token_uri = state.provider.oauth2.token_uri
+      } else {
+        xhr.open('POST', state.provider.oauth2.token_uri)
+      }
       if (state.client.secret) xhr.setRequestHeader('Authorization', 'Basic ' + btoa(state.client.client_id + ':' + state.client.secret))
       else data['client_id'] = state.client.client_id
       xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded')
